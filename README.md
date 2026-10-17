@@ -41,7 +41,9 @@
 | `/wl status` | 查看开关、人数、存储路径、拒绝提示 |
 | `/wl list [页码]` | 分页列出白名单玩家 |
 | `/wl add <玩家名>` | 添加玩家（支持离线玩家，可提前添加） |
+| `/wl addall <玩家名...>` | **批量添加**，空格或逗号分隔 |
 | `/wl remove <玩家名>` | 移除玩家 |
+| `/wl removeall <玩家名...>` | **批量移除**，空格或逗号分隔 |
 | `/wl check <玩家名>` | 查询某玩家是否在白名单中 |
 | `/wl on` / `/wl off` | 开启 / 关闭白名单（只影响之后的登录） |
 | `/wl empty on` / `/wl empty off` | 空名单时是否放行所有人 |
@@ -53,6 +55,16 @@
 ```
 /wl add "Bedrock Player"
 ```
+
+批量添加 / 批量移除使用空格或逗号分隔（自动去重，并逐个报告无效名称）：
+
+```
+/wl addall Steve Alex Notch
+/wl addall Steve, Alex, Notch
+/wl removeall Steve Alex
+```
+
+> 批量语法使用 greedy string，不能对名字加引号；含空格的基岩版玩家名请用单条 `/wl add "名字 带 空格"`。批量指令会返回「新增 / 已存在 / 无效」的汇总。
 
 ## 配置文件
 

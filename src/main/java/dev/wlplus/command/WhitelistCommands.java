@@ -16,7 +16,11 @@ import net.minecraft.server.permissions.Permissions;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.function.Predicate;
 
 /**
@@ -48,9 +52,15 @@ public final class WhitelistCommands {
 				.then(Commands.literal("add")
 						.then(Commands.argument("name", StringArgumentType.string())
 								.executes(context -> add(context, store))))
+				.then(Commands.literal("addall")
+						.then(Commands.argument("names", StringArgumentType.greedyString())
+								.executes(context -> addAll(context, store))))
 				.then(Commands.literal("remove")
 						.then(Commands.argument("name", StringArgumentType.string())
 								.executes(context -> remove(context, store))))
+				.then(Commands.literal("removeall")
+						.then(Commands.argument("names", StringArgumentType.greedyString())
+								.executes(context -> removeAll(context, store))))
 				.then(Commands.literal("check")
 						.then(Commands.argument("name", StringArgumentType.string())
 								.executes(context -> check(context, store))))
@@ -62,7 +72,7 @@ public final class WhitelistCommands {
 				.then(Commands.literal("reload").executes(context -> reload(context, store)))
 				.then(Commands.literal("save").executes(context -> save(context, store)));
 
-		dispatcher.register(root.build());
+		dispatcher.register(root);
 	}
 
 	private static int help(CommandContext<CommandSourceStack> context) {
@@ -72,7 +82,9 @@ public final class WhitelistCommands {
 		info(source, "/wl status - 查看白名单状态");
 		info(source, "/wl list [页码] - 列出白名单玩家");
 		info(source, "/wl add <玩家名> - 添加玩家");
+		info(source, "/wl addall <玩家名...> - 批量添加（空格或逗号分隔）");
 		info(source, "/wl remove <玩家名> - 移除玩家");
+		info(source, "/wl removeall <玩家名...> - 批量移除（空格或逗号分隔）");
 		info(source, "/wl check <玩家名> - 查询玩家是否在白名单中");
 		info(source, "/wl on|off - 开启或关闭白名单");
 		info(source, "/wl empty on|off - 名单为空时是否放行所有人");
@@ -157,6 +169,84 @@ public final class WhitelistCommands {
 		}
 
 		return fail(source, name.trim() + " 不在白名单中。");
+	}
+
+	private static int addAll(CommandContext<CommandSourceStack> context, WhitelistStore store) {
+		final CommandSourceStack source = context.getSource();
+		final List<String> names = splitNames(StringArgumentType.getString(context, "names"));
+
+		if (names.isEmpty()) {
+			return fail(source, "没有可添加的玩家名。");
+		}
+
+		final String addedBy = source.getDisplayName().getString();
+		int added = 0;
+		int existing = 0;
+		final List<String> invalid = new ArrayList<>();
+
+		for (String name : names) {
+			switch (store.add(name, addedBy)) {
+				case ADDED -> added++;
+				case ALREADY_PRESENT -> existing++;
+				default -> invalid.add(name);
+			}
+		}
+
+		info(source, "批量添加完成：新增 " + added + " 人，已存在 " + existing
+				+ " 人，无效 " + invalid.size() + " 个；当前共 " + store.size() + " 人。");
+
+		if (!invalid.isEmpty()) {
+			info(source, "以下名称无效：" + String.join("、", invalid));
+		}
+
+		return added > 0 ? 1 : 0;
+	}
+
+	private static int removeAll(CommandContext<CommandSourceStack> context, WhitelistStore store) {
+		final CommandSourceStack source = context.getSource();
+		final List<String> names = splitNames(StringArgumentType.getString(context, "names"));
+
+		if (names.isEmpty()) {
+			return fail(source, "没有可移除的玩家名。");
+		}
+
+		int removed = 0;
+		final List<String> missing = new ArrayList<>();
+
+		for (String name : names) {
+			if (store.remove(name)) {
+				removed++;
+			} else {
+				missing.add(name);
+			}
+		}
+
+		info(source, "批量移除完成：移除 " + removed + " 人，未找到 " + missing.size()
+				+ " 人；当前共 " + store.size() + " 人。");
+
+		if (!missing.isEmpty()) {
+			info(source, "以下玩家不在白名单中：" + String.join("、", missing));
+		}
+
+		return removed > 0 ? 1 : 0;
+	}
+
+	/**
+	 * Splits a raw argument on commas (half/full width) and whitespace, dropping
+	 * case-insensitive duplicates while keeping the first spelling.
+	 */
+	private static List<String> splitNames(String raw) {
+		final Map<String, String> unique = new LinkedHashMap<>();
+
+		for (String part : raw.replace('，', ',').replace('；', ',').replace(';', ',').split("[,\\s]+")) {
+			final String name = part.trim();
+
+			if (!name.isEmpty()) {
+				unique.putIfAbsent(name.toLowerCase(Locale.ROOT), name);
+			}
+		}
+
+		return new ArrayList<>(unique.values());
 	}
 
 	private static int check(CommandContext<CommandSourceStack> context, WhitelistStore store) {
