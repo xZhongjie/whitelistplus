@@ -34,7 +34,9 @@ abstract class PlayerListMixin {
 			return;
 		}
 
-		if (store.shouldDeny(nameAndId.name())) {
+		final boolean operator = ((PlayerList) (Object) this).isOp(nameAndId);
+
+		if (store.shouldDeny(nameAndId.name(), operator)) {
 			WhitelistPlus.LOGGER.info("拒绝未在白名单中的玩家 {} 登录", nameAndId.name());
 			callback.setReturnValue(Component.literal(store.kickMessage()));
 		}

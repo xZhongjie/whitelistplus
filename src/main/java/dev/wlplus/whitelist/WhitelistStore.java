@@ -52,6 +52,7 @@ public final class WhitelistStore {
 
 	private boolean enabled;
 	private boolean allowWhenEmpty = true;
+	private boolean allowOps = true;
 	private String kickMessage = DEFAULT_KICK_MESSAGE;
 
 	public WhitelistStore(Path file) {
@@ -68,6 +69,10 @@ public final class WhitelistStore {
 
 	public synchronized boolean allowWhenEmpty() {
 		return allowWhenEmpty;
+	}
+
+	public synchronized boolean allowOps() {
+		return allowOps;
 	}
 
 	public synchronized String kickMessage() {
@@ -90,10 +95,16 @@ public final class WhitelistStore {
 	}
 
 	/**
-	 * Returns {@code true} when the player with the given name must be rejected.
+	 * Returns {@code true} when the player must be rejected.
+	 *
+	 * @param name     player name
+	 * @param operator whether the player currently has OP permissions
 	 */
-	public synchronized boolean shouldDeny(String name) {
+	public synchronized boolean shouldDeny(String name, boolean operator) {
 		if (!enabled) {
+			return false;
+		}
+		if (operator && allowOps) {
 			return false;
 		}
 		if (entries.isEmpty() && allowWhenEmpty) {
@@ -148,6 +159,13 @@ public final class WhitelistStore {
 		}
 	}
 
+	public synchronized void setAllowOps(boolean value) {
+		if (this.allowOps != value) {
+			this.allowOps = value;
+			save();
+		}
+	}
+
 	public static boolean isValidName(String name) {
 		if (name == null) {
 			return false;
@@ -178,6 +196,7 @@ public final class WhitelistStore {
 		entries.clear();
 		enabled = false;
 		allowWhenEmpty = true;
+		allowOps = true;
 		kickMessage = DEFAULT_KICK_MESSAGE;
 
 		if (Files.notExists(file)) {
@@ -191,6 +210,7 @@ public final class WhitelistStore {
 
 			enabled = readBoolean(root, "enabled", false);
 			allowWhenEmpty = readBoolean(root, "allowWhenEmpty", true);
+			allowOps = readBoolean(root, "allowOps", true);
 
 			if (root.has("kickMessage") && root.get("kickMessage").isJsonPrimitive()) {
 				final String message = root.get("kickMessage").getAsString();
@@ -233,6 +253,7 @@ public final class WhitelistStore {
 			entries.clear();
 			enabled = false;
 			allowWhenEmpty = true;
+			allowOps = true;
 			kickMessage = DEFAULT_KICK_MESSAGE;
 			save();
 		}
@@ -242,6 +263,7 @@ public final class WhitelistStore {
 		final JsonObject root = new JsonObject();
 		root.addProperty("enabled", enabled);
 		root.addProperty("allowWhenEmpty", allowWhenEmpty);
+		root.addProperty("allowOps", allowOps);
 		root.addProperty("kickMessage", kickMessage);
 
 		final JsonArray array = new JsonArray();

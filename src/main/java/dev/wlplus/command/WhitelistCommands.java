@@ -69,6 +69,9 @@ public final class WhitelistCommands {
 				.then(Commands.literal("empty")
 						.then(Commands.literal("on").executes(context -> setAllowWhenEmpty(context, store, true)))
 						.then(Commands.literal("off").executes(context -> setAllowWhenEmpty(context, store, false))))
+				.then(Commands.literal("ops")
+						.then(Commands.literal("on").executes(context -> setAllowOps(context, store, true)))
+						.then(Commands.literal("off").executes(context -> setAllowOps(context, store, false))))
 				.then(Commands.literal("reload").executes(context -> reload(context, store)))
 				.then(Commands.literal("save").executes(context -> save(context, store)));
 
@@ -88,6 +91,7 @@ public final class WhitelistCommands {
 		info(source, "/wl check <玩家名> - 查询玩家是否在白名单中");
 		info(source, "/wl on|off - 开启或关闭白名单");
 		info(source, "/wl empty on|off - 名单为空时是否放行所有人");
+		info(source, "/wl ops on|off - OP 是否无需白名单直接进服");
 		info(source, "/wl reload - 从磁盘重新加载");
 		info(source, "/wl save - 立即保存到磁盘");
 
@@ -101,6 +105,7 @@ public final class WhitelistCommands {
 		info(source, " - 白名单：" + (store.isEnabled() ? "已开启" : "已关闭"));
 		info(source, " - 名单人数：" + store.size());
 		info(source, " - 空名单放行：" + (store.allowWhenEmpty() ? "是" : "否"));
+		info(source, " - OP 免白名单：" + (store.allowOps() ? "是" : "否"));
 		info(source, " - 文件：" + store.file());
 		info(source, " - 拒绝提示：" + store.kickMessage().replace("\n", " / "));
 
@@ -286,6 +291,13 @@ public final class WhitelistCommands {
 		final CommandSourceStack source = context.getSource();
 		store.setAllowWhenEmpty(value);
 		info(source, "空名单放行已" + (value ? "开启" : "关闭") + "。");
+		return 1;
+	}
+
+	private static int setAllowOps(CommandContext<CommandSourceStack> context, WhitelistStore store, boolean value) {
+		final CommandSourceStack source = context.getSource();
+		store.setAllowOps(value);
+		info(source, "OP 免白名单已" + (value ? "开启" : "关闭") + "。");
 		return 1;
 	}
 
