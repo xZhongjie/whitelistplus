@@ -115,7 +115,7 @@
 
 产物：`build/libs/whitelistplus-1.0.0.jar`（Windows 使用 `gradlew.bat`）。
 
-也可以直接把仓库推到 GitHub，`.github/workflows/build.yml` 会在每次 push / PR 时自动构建，并在 Actions 页面的 **Artifacts** 中提供 `whitelistplus-jar`。
+也可以直接把仓库推到 GitHub，`.github/workflows/build.yml` 会在每次 push / PR 时自动构建，并在 Actions 页面的 **Artifacts** 中提供 `whitelistplus-jar`。手动触发该 workflow（workflow_dispatch）还会额外启动一次真实的 26.1.2 专用服务端做冒烟测试，确认模组与 Mixin 能正常加载。
 
 ## 安全提示
 
