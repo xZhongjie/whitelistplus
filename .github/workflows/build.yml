@@ -35,3 +35,63 @@ jobs:
           name: whitelistplus-jar
           path: build/libs/whitelistplus-*.jar
           if-no-files-found: error
+
+  # Manual-only smoke test: boots a real 26.1.2 dedicated server with the mod
+  # installed and checks that the mixin applies and the mod initializes.
+  smoke:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare server files
+        run: |
+          mkdir -p run
+          echo "eula=true" > run/eula.txt
+          printf "online-mode=false\nlevel-type=flat\nspawn-protection=0\nmotd=Whitelist Plus smoke test\n" > run/server.properties
+
+      - name: Boot server and verify mod init
+        run: |
+          set +e
+          ./gradlew runServer --no-daemon --stacktrace --args="--nogui" > server.log 2>&1 &
+          GRADLE_PID=$!
+
+          STARTED=0
+          for i in $(seq 1 120); do
+            if grep -q "Done (" server.log; then STARTED=1; break; fi
+            if ! kill -0 "$GRADLE_PID" 2>/dev/null; then break; fi
+            sleep 5
+          done
+
+          echo "===== Whitelist Plus log lines ====="
+          grep -i "whitelist plus" server.log || true
+          echo "===== Server log tail ====="
+          tail -n 150 server.log
+
+          pkill -f "devlaunchinjector" 2>/dev/null || true
+          pkill -f "KnotServer" 2>/dev/null || true
+          kill "$GRADLE_PID" 2>/dev/null || true
+          sleep 2
+
+          if [ "$STARTED" != "1" ]; then
+            echo "::error::Dedicated server did not finish starting"
+            exit 1
+          fi
+
+          grep -q "Whitelist Plus initialized" server.log || {
+            echo "::error::Whitelist Plus did not initialize"
+            exit 1
+          }
